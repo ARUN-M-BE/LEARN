@@ -1,56 +1,66 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { McpAgent } from "agents/mcp";
 import { z } from "zod";
+import { optional } from "zod/v4";
 
-// Define our MCP agent with tools
+interface Project {
+	id: string;
+	name: string;
+	description: string;
+	createAt: string;
+	updateAt: string;
+}
+interface Todo {
+	id: string;
+	ProjectId: string;
+	name: string;
+	description: string;
+	status: "pending" | "in-progress" | "completed";
+	progress:"low" | "medium" | "high";
+	createAt: string;
+	updateAt: string;
+}
 export class MyMCP extends McpAgent {
 	server = new McpServer({
-		name: "Authless Calculator",
+		name: "PROJECT PLAN MCP",
 		version: "1.0.0",
 	});
 
 	async init() {
-		// Simple addition tool
-		this.server.tool("add", { a: z.number(), b: z.number() }, async ({ a, b }) => ({
-			content: [{ type: "text", text: String(a + b) }],
-		}));
+		this.server.tool('createProject', 'Create a new project', z.object({
+			name: z.string().min(1).max(100).describe('Name of the project'),
+			description: z.string().optional().describe('Description of the project'),
+		}), async ({name, description}) => {
+			const newProject: Project = {
+				id: crypto.randomUUID(),
+				name: name,
+				description: description || '',
+				createAt: new Date().toISOString(),
+				updateAt: new Date().toISOString(),
+			}; 
+			return {
+				content:[
+					{
+						type: 'text',
+						text: `Project "${newProject.name}" created successfully with ID: ${newProject.id}`,
+					}
+				]
+			};
+		}
+					}
+				]
+			};
+		});
 
-		// Calculator tool with multiple operations
-		this.server.tool(
-			"calculate",
-			{
-				operation: z.enum(["add", "subtract", "multiply", "divide"]),
-				a: z.number(),
-				b: z.number(),
-			},
-			async ({ operation, a, b }) => {
-				let result: number;
-				switch (operation) {
-					case "add":
-						result = a + b;
-						break;
-					case "subtract":
-						result = a - b;
-						break;
-					case "multiply":
-						result = a * b;
-						break;
-					case "divide":
-						if (b === 0)
-							return {
-								content: [
-									{
-										type: "text",
-										text: "Error: Cannot divide by zero",
-									},
-								],
-							};
-						result = a / b;
-						break;
-				}
-				return { content: [{ type: "text", text: String(result) }] };
-			},
-		);
+		this.server.tool('listTodos', 'List all todos for a project', z.object({
+			projectId: z.string().min(1),
+		}), async (input) => {
+			// Implement your logic to list todos for a project
+			const todos: Todo[] = [
+				// Fetch todos from your database based on input.projectId
+			];
+			return todos;
+		});
 	}
 }
 
